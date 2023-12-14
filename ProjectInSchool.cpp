@@ -472,22 +472,16 @@ struct HandleData {
 
         else if (optionOf5 == "2") {
             std::string statDate;
-
+            std::string day, month, year;
             std::time_t currentTime = std::time(nullptr);
             std::tm* currentDateTime = std::localtime(&currentTime);
-            int year = currentDateTime->tm_year + 1900;
-            int month = currentDateTime->tm_mon + 1;
-            int day = currentDateTime->tm_mday;
+            year = std::to_string(currentDateTime->tm_year + 1900);
+            month = std::to_string(currentDateTime->tm_mon + 1);
+            day = std::to_string(currentDateTime->tm_mday);
             std::cout << "Current Date: " << day << "-" << month << "-" << year << std::endl;
-
-            if (day < 10 && month < 10)
-                statDate = std::to_string(year) + "0" + std::to_string(month) + "0" + std::to_string(day);
-            else if (day < 10 && month >= 10)
-                statDate = std::to_string(year) + std::to_string(month) + "0" + std::to_string(day);
-            else if (day >= 10 && month < 10)
-                statDate = std::to_string(year) + "0" + std::to_string(month) + std::to_string(day);
-            else 
-                statDate = std::to_string(year) + std::to_string(month) + std::to_string(day);
+            TransformDateMonth(day);
+            TransformDateMonth(month);
+            statDate = year + month + day;
 
             for (const auto& project : projects) {
                 if (project->deadline <= statDate) i++;
