@@ -7,6 +7,7 @@
 #include <ctime>
 #pragma warning(disable:4996)
 const std::string FILE_NAME = "group.txt";
+const std::string FILE_NAMESTAT = "statistic.txt";
 
 struct ProjectSubmission {
     int projectNumber;
@@ -195,24 +196,32 @@ struct HandleData {
     }
 
     //Option 2
+    void TransformDateMonth(std::string& dateIndex) {
+        if (dateIndex.length() <= 1) {
+            dateIndex = '0' + dateIndex;
+        }
+    }
     std::vector<Project*> projects;
     void InputProjectInformation() {
-        std::string dayIndex, monthIndex, yearIndex;
+        int dayIndex, monthIndex, yearIndex;
+        std::string day, month, year;
         if (projects.empty()) {
             Project* project = new Project();
             int numberOfProject;
             std::cout << "Enter number of project: "; std::cin >> numberOfProject;
             for (int i = 1; i <= numberOfProject; i++) {
                 std::cin.ignore();
-                std::cout << "(*) Enter information of Project " << i << "\n";
+                std::cout << "(*) Enter information of project " << i << "\n";
                 project->projectNumber = i;
                 std::cout << "(+) Enter a short description about project: ";
                 std::getline(std::cin, project->shortDescriptionOfProject);
-                std::cout << "(-) Enter a submission deadline of project\n";
-                std::cout << "(+) Enter day of deadLine (DD): "; std::cin >> dayIndex; project->dayOfDeadLine = dayIndex;
-                std::cout << "(+) Enter month of deadLine (MM): "; std::cin >> monthIndex; project->monthOfDeadLine = monthIndex;
-                std::cout << "(+) Enter year of deadLine (YYYY): "; std::cin >> yearIndex; project->yearOfDeadLine = yearIndex;
-                project->deadline = yearIndex + monthIndex + dayIndex;
+                std::cout << "(-) Enter a submission deadline of project(day month year): ";
+                std::cin >> dayIndex; std::cin >> monthIndex; std::cin >> yearIndex;
+                day = std::to_string(dayIndex); month = std::to_string(monthIndex); year = std::to_string(yearIndex);
+                TransformDateMonth(day); project->dayOfDeadLine = day;
+                TransformDateMonth(month); project->monthOfDeadLine = month;
+                project->yearOfDeadLine = year;
+                project->deadline = year + (month)+(day);
                 addProject(project);
                 project = new Project();
             }
@@ -227,8 +236,8 @@ struct HandleData {
         std::cout << "Project Information:\n";
         for (const auto project : projects) {
             std::cout << "Project: " << project->projectNumber << "\n";
-            std::cout << "Description of project: " << project->shortDescriptionOfProject << "\n";
-            std::cout << "Submission Deadline of project: " << project->dayOfDeadLine << "/" << project->monthOfDeadLine << "/" << project->yearOfDeadLine << "\n";
+            std::cout << "Description: " << project->shortDescriptionOfProject << "\n";
+            std::cout << "Submission Deadline: " << project->dayOfDeadLine << "/" << project->monthOfDeadLine << "/" << project->yearOfDeadLine << "\n";
         }
     }
     void addProject(Project* project) {
@@ -236,9 +245,8 @@ struct HandleData {
     }
     //Option 3
     void SubmitProject() {
-        int groupIndex, projectIndex;
-        std::string dayIndex, monthIndex, yearIndex;
-
+        int groupIndex, projectIndex, dayIndex, monthIndex, yearIndex;
+        std::string day, month, year;
         std::cout << "Enter group number for project submission: ";
         std::cin >> groupIndex;
 
@@ -254,11 +262,13 @@ struct HandleData {
             std::cout << "Invalid project number. Please try again.\n";
             return;
         }
-        std::cout << "Enter submission date (DD MM YYYY): ";
+        std::cout << "Enter submission date (day month year): ";
         std::cin >> dayIndex;
         std::cin >> monthIndex;
         std::cin >> yearIndex;
-
+        day = std::to_string(dayIndex); month = std::to_string(monthIndex); year = std::to_string(yearIndex);
+        TransformDateMonth(day);
+        TransformDateMonth(month);
         ProjectSubmission* submission = nullptr;
 
 
@@ -274,7 +284,7 @@ struct HandleData {
             submission->projectNumber = projectIndex;
             listOfGroup[groupIndex - 1]->submissions.push_back(submission);
         }
-        submission->submissionDate = yearIndex + monthIndex + dayIndex;
+        submission->submissionDate = year + month + day;
 
         std::cout << "Project submitted successfully!\n";
     }
@@ -350,13 +360,14 @@ struct HandleData {
             }
         }
         else if (optionOf4 == "2") {
+
             int group_Number;
             std::cout << "Enter group number: ";
             std::cin >> group_Number;
             // Display table header
             printBorderForOption4();
             std::cout << "\t" << std::setfill(' ')
-                << "|" << std::setw(9) << "Project"
+                << "|" << std::setw(9) << "Group"
                 << "|" << std::setw(19) << "\tStatement" << column_char << "\n";
             printBorderForOption4();
             for (const auto& project : projects) {
@@ -372,12 +383,38 @@ struct HandleData {
                     }
                 }
             }
-
+            std::cin.ignore();
         }
 
     }
     // Option 5
-    
+    void exportResult(std::string statDate) {
+        std::ofstream stat(FILE_NAMESTAT);
+        if (!stat.is_open()) {
+            std::cerr << "Error opening file for writing: " << FILE_NAMESTAT << std::endl;
+            return;
+        }
+        stat << std::setw(29);
+        for (const auto& project : projects) {
+            if (project->deadline <= statDate) {
+                std::cin.ignore();
+                stat << "Project " << project->projectNumber << std::setw(22);
+            }
+        }
+
+            stat << std::setw(0) << std::endl;
+            for (const auto& group : listOfGroup) {
+                stat << "Group " << group->groupNumber;
+                for (const auto& project : projects) {
+                    for (const auto& submission : group->submissions) {
+                        if (project->deadline <= statDate && project->projectNumber == submission->projectNumber)
+                            stat << std::setw(23) << submission->statement;
+                    }
+                }
+                stat << "\n";
+            }
+        stat.close();
+    }
     
     void overallStat() {
         int i = 0;
@@ -389,17 +426,22 @@ struct HandleData {
         std::getline(std::cin, optionOf5);
 
         if (optionOf5 == "1") {
-            std::string statDay, statMonth, statYear;
+            int statDay, statMonth, statYear;
+            std::string dD, mM, yY;
             std::string statDate;
-            std::cout << "Enter the date (DD MM YYYY): ";
+            std::cout << "Enter the date (day month year): ";
             std::cin >> statDay >> statMonth >> statYear;
-            statDate = statYear + statMonth + statDay;
+            dD = std::to_string(statDay); mM = std::to_string(statMonth); yY = std::to_string(statYear);
+            TransformDateMonth(dD);
+            TransformDateMonth(mM);
+            statDate = yY + mM + dD;
             std::cin.ignore();
             for (const auto& project : projects) {
                 if (project->deadline <= statDate) i++;
             }
             if (i == 0) std::cout << "No project before this date.\n";
             else {
+                std::cout << "Now showing the statistic of projects before " << statDay << "/" << statMonth << "/" << statYear << std::endl << std::endl;
                 printBorderForOption5(i);
                 std::cout << "\t" << std::setfill(' ')
                     << "|" << std::setw(9) << "Group";
@@ -421,6 +463,8 @@ struct HandleData {
                     std::cout << "\n";
                     printBorderForOption5(i);
                 }
+                exportResult(statDate);
+                std::cout << "\n" << "The result is exported to the statistic.txt file";
             }
         }
         
@@ -434,7 +478,7 @@ struct HandleData {
             int year = currentDateTime->tm_year + 1900;
             int month = currentDateTime->tm_mon + 1;
             int day = currentDateTime->tm_mday;
-            std::cout << "Current Date: " << day << "-" << month << "-" << year << std::endl << std::endl;
+            std::cout << "Current Date: " << day << "-" << month << "-" << year << std::endl;
 
             if (day < 10 && month < 10)
                 statDate = std::to_string(year) + "0" + std::to_string(month) + "0" + std::to_string(day);
@@ -450,6 +494,7 @@ struct HandleData {
             }
             if (i == 0) std::cout << "No project before this date.\n";
             else {
+                std::cout << "Now showing stastics before today's date\n";
                 printBorderForOption5(i);
                 std::cout << "\t" << std::setfill(' ')
                     << "|" << std::setw(9) << "Group";
@@ -471,6 +516,9 @@ struct HandleData {
                     std::cout << "\n";
                     printBorderForOption5(i);
                 }
+                std::cin.ignore();
+                exportResult(statDate);
+                std::cout << "\n" << "The result is exported to the statistic.txt file";
             }
         }
 
